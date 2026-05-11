@@ -1,25 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'screens/login_screen.dart'; 
 
 Future<void> main() async {
-  // Wajib dipanggil sebelum inisialisasi hal lain di Flutter
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Membaca file .env
-  await dotenv.load(fileName: ".env");
-
-  // 2. Mengambil URL dan Key dari .env yang sudah kamu buat
-  String supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
-  String supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
-
-  // 3. Menghubungkan Flutter ke Supabase
+  // KITA SUNTIK LANGSUNG URL & KEY-NYA DI SINI (TANPA .ENV)
   await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseAnonKey,
+    url: 'https://tdjmedsweejiwibzywtv.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkam1lZHN3ZWVqaXdpYnp5d3R2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0NzI3ODksImV4cCI6MjA5NDA0ODc4OX0.ggSVpWwbvnSYbGJR6KuY9zrHtNbpqMhx9zKBVNBFxeE',
   );
 
-  // 4. Menjalankan aplikasi
   runApp(const MyApp());
 }
 
@@ -30,19 +21,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SeismoGuard',
-      debugShowCheckedModeBanner: false, // Menghilangkan pita "DEBUG" di pojok kanan atas
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text(
-            'SeismoGuard Berhasil Terhubung ke Supabase! 🎉',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
+      home: const LoginScreen(),
     );
   }
 }
