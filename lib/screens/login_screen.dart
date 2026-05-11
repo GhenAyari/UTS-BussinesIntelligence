@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -28,10 +29,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (response.user != null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('AKUN DIBUAT & BERHASIL MASUK! 🎉')),
-          );
-        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
       }
     } on AuthException catch (e) {
       // 2. KALAU AKUNNYA TERNYATA UDAH ADA, BARU KITA SURUH LOGIN NORMAL
@@ -43,10 +45,11 @@ class _LoginScreenState extends State<LoginScreen> {
           );
           
           if (loginResponse.user != null && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('LOGIN NORMAL BERHASIL! 🎉')),
-            );
-          }
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        }
         } catch (loginError) {
           if (mounted) {
              ScaffoldMessenger.of(context).showSnackBar(
