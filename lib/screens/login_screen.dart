@@ -15,54 +15,31 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
 
   // Fungsi untuk memproses login
+  // Fungsi untuk memproses login normal
   Future<void> _login() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // 1. KITA PAKSA BUAT AKUN BARU LANGSUNG DARI SINI
-      final response = await Supabase.instance.client.auth.signUp(
+      // SEKARANG KITA PAKAI JALUR LOGIN NORMAL (Bukan signUp lagi)
+      final response = await Supabase.instance.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      if (response.user != null) {
-        if (mounted) {
+      if (response.user != null && mounted) {
+        // Langsung lempar ke HomeScreen untuk dicek Role-nya
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );
       }
-      }
     } on AuthException catch (e) {
-      // 2. KALAU AKUNNYA TERNYATA UDAH ADA, BARU KITA SURUH LOGIN NORMAL
-      if (e.message.contains('User already registered')) {
-        try {
-          final loginResponse = await Supabase.instance.client.auth.signInWithPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-          
-          if (loginResponse.user != null && mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
-        } catch (loginError) {
-          if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Gagal: $loginError')),
-            );
-          }
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error Supabase: ${e.message}')),
-          );
-        }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error Supabase: ${e.message}')),
+        );
       }
     } catch (e) {
       if (mounted) {

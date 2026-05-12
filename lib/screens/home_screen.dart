@@ -1,59 +1,74 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'admin_pusat_screen.dart';
+import 'admin_daerah_screen.dart';
+import 'public_screen.dart';
 import 'login_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-  // Fungsi untuk Logout
-  Future<void> _logout(BuildContext context) async {
-    await Supabase.instance.client.auth.signOut();
-    
-    // Setelah logout, arahkan kembali ke LoginScreen
-    if (context.mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  // Fungsi ini mengambil role dari database Supabase
+  Future<Widget> _checkUserRole() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return const LoginScreen();
+
+    try {
+      final response = await Supabase.instance.client
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+
+      final role = response['role'] as String;
+
+      // LOGIKA MELEMPAR HALAMAN (ROUTING)
+      if (role == 'admin_pusat') {
+        return const AdminPusatScreen();
+      } else if (role == 'admin_daerah') {
+        return const AdminDaerahScreen();
+      } else {
+        return const PublicScreen(); // Default lempar ke halaman Public (Gempa Terkini)
+      }
+    } catch (e) {
+      // Jika terjadi error, lempar ke Public
+      return const PublicScreen(); 
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Mengambil data email user yang sedang login saat ini
-    final user = Supabase.instance.client.auth.currentUser;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard SeismoGuard'),
-        backgroundColor: Colors.blueAccent,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _logout(context),
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.check_circle_outline, size: 100, color: Colors.green),
-            const SizedBox(height: 20),
-            const Text(
-              'Selamat Datang!',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Kamu login sebagai:\n${user?.email ?? "Tidak diketahui"}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16, color: Colors.grey),
-            ),
-          ],
-        ),
+      body: FutureBuilder<Widget>(
+        future: _checkUserRole(),
+        builder: (context, snapshot) {
+          // Selagi nunggu balasan dari database, tampilkan animasi loading
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Mengecek Hak Akses...')
+                ],
+              ),
+            );
+          }
+
+          // Kalau pengecekan selesai, tampilkan layarnya!
+          if (snapshot.hasData) {
+            return snapshot.data!;
+          }
+
+          // Fallback kalau error
+          return const PublicScreen();
+        },
       ),
     );
   }
