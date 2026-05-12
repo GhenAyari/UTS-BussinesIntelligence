@@ -84,10 +84,13 @@ class _PublicScreenState extends State<PublicScreen> {
               final wilayah = gempa['dim_lokasi']['wilayah'];
 
               // Bikin warna indikator bahaya berdasarkan status
+              // Bikin warna indikator bahaya berdasarkan status
               Color statusColor = Colors.grey;
-              if (status == 'Gempa Terasa Jelas' || magnitudo >= 5.0) {
+              String statusKecil = status.toString().toLowerCase();
+
+              if (statusKecil.contains('terasa') || magnitudo >= 5.0) {
                 statusColor = Colors.red;
-              } else if (status == 'Gempa Sedang') {
+              } else if (statusKecil.contains('sedang')) {
                 statusColor = Colors.orange;
               } else {
                 statusColor = Colors.green;
