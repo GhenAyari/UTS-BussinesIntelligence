@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Kita pinjam palet warna yang sama biar seragam
 class SeismicColors {
   static const Color navyDark = Color(0xFF0F172A);
   static const Color redAlert = Color(0xFFE11D48);
@@ -20,29 +19,81 @@ class AllEarthquakesScreen extends StatefulWidget {
 
 class _AllEarthquakesScreenState extends State<AllEarthquakesScreen> {
   List<dynamic> _earthquakes = [];
-  bool _isLoading = true;
+  bool _isLoading = true; // Loading pertama kali
+  bool _isLoadingMore = false; // Loading saat scroll ke bawah
+  bool _hasMoreData = true; // Penanda apakah masih ada sisa data di database
+  
+  // Variabel Pagination
+  int _limit = 20; // Jumlah data per tarikan
+  int _offset = 0; // Titik mulai tarikan data
+  
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _fetchAllData();
+    _fetchData(isRefresh: true); // Tarik data pertama kali
+
+    // Pasang pendengar scroll
+    _scrollController.addListener(() {
+      // Jika scroll sudah mencapai batas bawah dan tidak sedang loading data lain
+      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+        if (!_isLoadingMore && _hasMoreData) {
+          _fetchData(isRefresh: false);
+        }
+      }
+    });
   }
 
-  // Menarik SEMUA data tanpa dilimit, diurutkan dari yang terbaru
-  Future<void> _fetchAllData() async {
+  @override
+  void dispose() {
+    _scrollController.dispose(); // Wajib dibersihkan saat pindah halaman
+    super.dispose();
+  }
+
+  // Fungsi sakti untuk Refresh DAN Infinite Loading
+  Future<void> _fetchData({required bool isRefresh}) async {
+    if (isRefresh) {
+      // Jika refresh dari atas, kembalikan semuanya ke awal
+      _offset = 0;
+      _hasMoreData = true;
+      setState(() => _isLoading = true);
+    } else {
+      // Jika infinite scroll, nyalakan loading bawah
+      setState(() => _isLoadingMore = true);
+    }
+
     try {
+      // Menarik data dengan batasan limit dan offset
       final data = await Supabase.instance.client
           .from('gempa_live')
           .select('*')
-          .order('waktu', ascending: false); 
+          .order('waktu', ascending: false)
+          .range(_offset, _offset + _limit - 1); 
 
       setState(() {
-        _earthquakes = data;
+        if (isRefresh) {
+          _earthquakes = data; // Timpa data lama
+        } else {
+          _earthquakes.addAll(data); // Sambung ke bawah data yang sudah ada
+        }
+
+        _offset += data.length; // Geser titik mulai untuk tarikan berikutnya
+
+        // Jika data yang didapat lebih sedikit dari limit, berarti data sudah habis
+        if (data.length < _limit) {
+          _hasMoreData = false;
+        }
+
         _isLoading = false;
+        _isLoadingMore = false;
       });
     } catch (e) {
-      debugPrint("Error fetching all data: $e");
-      setState(() => _isLoading = false);
+      debugPrint("Error fetching data: $e");
+      setState(() {
+        _isLoading = false;
+        _isLoadingMore = false;
+      });
     }
   }
 
@@ -58,24 +109,33 @@ class _AllEarthquakesScreenState extends State<AllEarthquakesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Global Feed', style: TextStyle(color: SeismicColors.navyDark, fontWeight: FontWeight.w900)),
-            Text('${_earthquakes.length} Events Recorded', style: const TextStyle(color: SeismicColors.textMuted, fontSize: 12)),
+            Text('${_earthquakes.length} Events Loaded', style: const TextStyle(color: SeismicColors.textMuted, fontSize: 12)),
           ],
         ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator( // <-- DITAMBAHKAN DI SINI
-              onRefresh: _fetchAllData, // <-- Memanggil ulang fungsi fetch saat ditarik
+          : RefreshIndicator(
+              onRefresh: () => _fetchData(isRefresh: true),
               color: SeismicColors.navyDark,
               child: ListView.builder(
+                controller: _scrollController, // Sambungkan ke controller
                 padding: const EdgeInsets.all(16),
-                itemCount: _earthquakes.length,
+                // Tambah 1 item ekstra di bawah khusus untuk indikator loading
+                itemCount: _earthquakes.length + (_hasMoreData ? 1 : 0),
                 itemBuilder: (context, index) {
+                  // Jika index mencapai ujung list, tampilkan loading spinner
+                  if (index == _earthquakes.length) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Center(child: CircularProgressIndicator(color: SeismicColors.blueLight)),
+                    );
+                  }
+
                   final item = _earthquakes[index];
                   double mag = double.tryParse(item['magnitude'].toString()) ?? 0;
                   
-                  // Logika Warna Kotak Magnitudo
-                  Color magColor = SeismicColors.blueLight; // Default untuk gempa kecil
+                  Color magColor = SeismicColors.blueLight; 
                   if (mag >= 6.0) magColor = SeismicColors.redAlert;
                   else if (mag >= 5.0) magColor = SeismicColors.orangeAlert;
 
@@ -83,7 +143,6 @@ class _AllEarthquakesScreenState extends State<AllEarthquakesScreen> {
                     margin: const EdgeInsets.only(bottom: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 0,
-                    // Menambahkan efek klik pada setiap item untuk melihat detail koordinat (opsional)
                     child: InkWell(
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -94,7 +153,6 @@ class _AllEarthquakesScreenState extends State<AllEarthquakesScreen> {
                         padding: const EdgeInsets.all(16),
                         child: Row(
                           children: [
-                            // Kotak Magnitudo
                             Container(
                               width: 55,
                               height: 55,
@@ -106,8 +164,6 @@ class _AllEarthquakesScreenState extends State<AllEarthquakesScreen> {
                               child: Text(mag.toStringAsFixed(1), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20)),
                             ),
                             const SizedBox(width: 16),
-                            
-                            // Detail Wilayah dan Waktu
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
