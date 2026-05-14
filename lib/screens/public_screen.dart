@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'analytics_view.dart'; // Sesuaikan folder jika berbeda
+import 'all_earthquakes_screen.dart';
 
 // --- THEME COLORS ---
 class SeismicColors {
@@ -65,9 +66,18 @@ class _PublicScreenState extends State<PublicScreen> {
         showUnselectedLabels: true,
         type: BottomNavigationBarType.fixed,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Live Map'),
-          BottomNavigationBarItem(icon: Icon(Icons.analytics_outlined), label: 'Analytics'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_rounded),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_outlined),
+            label: 'Live Map',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics_outlined),
+            label: 'Analytics',
+          ),
         ],
       ),
     );
@@ -86,7 +96,9 @@ class _DashboardViewState extends State<DashboardView> {
   // 1. Tarik Data BMKG Real-time (Untuk Hero Card)
   Future<Map<String, dynamic>?> _fetchBMKGLatest() async {
     try {
-      final response = await http.get(Uri.parse('https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json'));
+      final response = await http.get(
+        Uri.parse('https://data.bmkg.go.id/DataMKG/TEWS/autogempa.json'),
+      );
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return data['Infogempa']['gempa'];
@@ -105,18 +117,23 @@ class _DashboardViewState extends State<DashboardView> {
       final response = await Supabase.instance.client
           .from('gempa_live')
           .select('*')
-          .order('magnitude', ascending: false) // Tampilkan gempa paling besar di atas
+          .order(
+            'magnitude',
+            ascending: false,
+          ) // Tampilkan gempa paling besar di atas
           .limit(20); // Ambil 20 data saja biar list tidak terlalu panjang
 
       List<GempaModel> combinedData = [];
       for (var item in response) {
-        combinedData.add(GempaModel(
-          source: item['source'] ?? 'Unknown',
-          magnitude: item['magnitude'].toString(),
-          wilayah: item['wilayah'] ?? '-',
-          waktu: item['waktu'] ?? '-',
-          kedalaman: item['kedalaman'] ?? '-',
-        ));
+        combinedData.add(
+          GempaModel(
+            source: item['source'] ?? 'Unknown',
+            magnitude: item['magnitude'].toString(),
+            wilayah: item['wilayah'] ?? '-',
+            waktu: item['waktu'] ?? '-',
+            kedalaman: item['kedalaman'] ?? '-',
+          ),
+        );
       }
       return combinedData;
     } catch (e) {
@@ -134,10 +151,23 @@ class _DashboardViewState extends State<DashboardView> {
           backgroundColor: Colors.white,
           elevation: 0,
           leading: const Icon(Icons.menu, color: SeismicColors.navyDark),
-          title: const Text('SEISMIC.PRO', style: TextStyle(color: SeismicColors.navyDark, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+          title: const Text(
+            'SEISMIC.PRO',
+            style: TextStyle(
+              color: SeismicColors.navyDark,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+            ),
+          ),
           centerTitle: true,
           actions: [
-            IconButton(icon: const Icon(Icons.notifications_none_rounded, color: SeismicColors.navyDark), onPressed: () {})
+            IconButton(
+              icon: const Icon(
+                Icons.notifications_none_rounded,
+                color: SeismicColors.navyDark,
+              ),
+              onPressed: () {},
+            ),
           ],
         ),
         SliverPadding(
@@ -147,17 +177,37 @@ class _DashboardViewState extends State<DashboardView> {
               // ALERT BANNER
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: SeismicColors.redAlert, borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                  color: SeismicColors.redAlert,
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: const Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded, color: Colors.white, size: 28),
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      color: Colors.white,
+                      size: 28,
+                    ),
                     SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Tsunami Alert', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                          Text('Active monitoring. Follow local authorities instructions.', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                          Text(
+                            'Tsunami Alert',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            'Active monitoring. Follow local authorities instructions.',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -166,7 +216,14 @@ class _DashboardViewState extends State<DashboardView> {
               ),
 
               const SizedBox(height: 24),
-              const Text('LATEST EARTHQUAKE (BMKG)', style: TextStyle(fontWeight: FontWeight.w800, color: SeismicColors.textMuted, letterSpacing: 1)),
+              const Text(
+                'LATEST EARTHQUAKE (BMKG)',
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: SeismicColors.textMuted,
+                  letterSpacing: 1,
+                ),
+              ),
               const SizedBox(height: 12),
 
               // --- FUTURE BUILDER: HERO CARD (BMKG) ---
@@ -177,17 +234,26 @@ class _DashboardViewState extends State<DashboardView> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (!snapshot.hasData || snapshot.data == null) {
-                    return const Card(child: Padding(padding: EdgeInsets.all(16), child: Text('Gagal memuat data BMKG')));
+                    return const Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Text('Gagal memuat data BMKG'),
+                      ),
+                    );
                   }
 
                   final bmkg = snapshot.data!;
                   double mag = double.tryParse(bmkg['Magnitude'] ?? '0') ?? 0;
-                  Color badgeColor = mag >= 5.0 ? SeismicColors.redAlert : SeismicColors.orangeAlert;
+                  Color badgeColor = mag >= 5.0
+                      ? SeismicColors.redAlert
+                      : SeismicColors.orangeAlert;
                   String badgeText = mag >= 5.0 ? 'STRONG' : 'MODERATE';
 
                   return Card(
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     clipBehavior: Clip.antiAlias,
                     child: Column(
                       children: [
@@ -195,15 +261,41 @@ class _DashboardViewState extends State<DashboardView> {
                           children: [
                             Image.network(
                               'https://data.bmkg.go.id/DataMKG/TEWS/${bmkg['Shakemap']}',
-                              height: 200, width: double.infinity, fit: BoxFit.cover,
-                              errorBuilder: (context, error, stack) => Container(height: 200, color: SeismicColors.navyDark, child: const Center(child: Text('Peta tidak tersedia', style: TextStyle(color: Colors.white)))),
+                              height: 200,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stack) =>
+                                  Container(
+                                    height: 200,
+                                    color: SeismicColors.navyDark,
+                                    child: const Center(
+                                      child: Text(
+                                        'Peta tidak tersedia',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
                             ),
                             Positioned(
-                              top: 12, left: 12,
+                              top: 12,
+                              left: 12,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(4)),
-                                child: Text(badgeText, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: badgeColor,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  badgeText,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -213,18 +305,44 @@ class _DashboardViewState extends State<DashboardView> {
                           child: Row(
                             children: [
                               Container(
-                                width: 60, height: 60,
-                                decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(8)),
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: badgeColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                                 alignment: Alignment.center,
-                                child: Text(bmkg['Magnitude'], style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                                child: Text(
+                                  bmkg['Magnitude'],
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                               ),
                               const SizedBox(width: 16),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(bmkg['Wilayah'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: SeismicColors.navyDark), maxLines: 2, overflow: TextOverflow.ellipsis),
-                                    Text('Kedalaman: ${bmkg['Kedalaman']} • ${bmkg['Jam']}', style: const TextStyle(color: SeismicColors.textMuted, fontSize: 12)),
+                                    Text(
+                                      bmkg['Wilayah'],
+                                      style: const TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: SeismicColors.navyDark,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'Kedalaman: ${bmkg['Kedalaman']} • ${bmkg['Jam']}',
+                                      style: const TextStyle(
+                                        color: SeismicColors.textMuted,
+                                        fontSize: 12,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -241,8 +359,34 @@ class _DashboardViewState extends State<DashboardView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('RECENT ACTIVITY (GLOBAL FEED)', style: TextStyle(fontWeight: FontWeight.w800, color: SeismicColors.textMuted, letterSpacing: 1)),
-                  TextButton(onPressed: () {}, child: const Text('View All', style: TextStyle(color: Colors.blueAccent))),
+                  const Text(
+                    'RECENT ACTIVITY (GLOBAL FEED)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      color: SeismicColors.textMuted,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {},
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AllEarthquakesScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text(
+                        'View All',
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
 
@@ -259,7 +403,6 @@ class _DashboardViewState extends State<DashboardView> {
 
                   return Column(
                     children: snapshot.data!.map((gempa) {
-                      
                       // Logika warna berdasarkan Magnitudo
                       Color color = SeismicColors.greenAlert;
                       double magVal = double.tryParse(gempa.magnitude) ?? 0;
@@ -271,38 +414,83 @@ class _DashboardViewState extends State<DashboardView> {
 
                       // Label sumber API
                       Widget sourceBadge = Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
-                          color: gempa.source == 'BMKG' ? Colors.blue : (gempa.source == 'USGS' ? Colors.purple : Colors.teal),
+                          color: gempa.source == 'BMKG'
+                              ? Colors.blue
+                              : (gempa.source == 'USGS'
+                                    ? Colors.purple
+                                    : Colors.teal),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(gempa.source, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          gempa.source,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       );
 
                       return Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         child: Row(
                           children: [
                             Container(
-                              width: 50, height: 50,
-                              decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: color,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                               alignment: Alignment.center,
-                              child: Text(gempa.magnitude, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+                              child: Text(
+                                gempa.magnitude,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(gempa.wilayah, style: const TextStyle(fontWeight: FontWeight.bold, color: SeismicColors.navyDark), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  Text(
+                                    gempa.wilayah,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: SeismicColors.navyDark,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
                                       sourceBadge,
                                       const SizedBox(width: 8),
-                                      Expanded(child: Text('${gempa.waktu} • ${gempa.kedalaman}', style: const TextStyle(color: SeismicColors.textMuted, fontSize: 12), overflow: TextOverflow.ellipsis)),
+                                      Expanded(
+                                        child: Text(
+                                          '${gempa.waktu} • ${gempa.kedalaman}',
+                                          style: const TextStyle(
+                                            color: SeismicColors.textMuted,
+                                            fontSize: 12,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ],
@@ -323,10 +511,9 @@ class _DashboardViewState extends State<DashboardView> {
     );
   }
 }
- // Pastikan import ini ditambahkan di paling atas file!
+// Pastikan import ini ditambahkan di paling atas file!
 
 // --- LIVE MAP VIEW ---
-
 
 // --- LIVE MAP VIEW (PAKAI OPENSTREETMAP - GRATIS 100%) ---
 class LiveMapView extends StatefulWidget {
@@ -348,7 +535,9 @@ class _LiveMapViewState extends State<LiveMapView> {
 
   Future<void> _loadMapData() async {
     try {
-      final response = await Supabase.instance.client.from('gempa_live').select('*');
+      final response = await Supabase.instance.client
+          .from('gempa_live')
+          .select('*');
 
       List<Marker> newMarkers = [];
       for (var item in response) {
@@ -357,12 +546,16 @@ class _LiveMapViewState extends State<LiveMapView> {
           if (coords.length == 2) {
             double lat = double.tryParse(coords[0]) ?? 0;
             double lng = double.tryParse(coords[1]) ?? 0;
-            double mag = item['magnitude'] != null ? double.tryParse(item['magnitude'].toString()) ?? 0 : 0;
+            double mag = item['magnitude'] != null
+                ? double.tryParse(item['magnitude'].toString()) ?? 0
+                : 0;
 
             // Logika Warna Marker
             Color markerColor = SeismicColors.greenAlert;
-            if (mag >= 5.0) markerColor = SeismicColors.redAlert;
-            else if (mag >= 4.0) markerColor = SeismicColors.orangeAlert;
+            if (mag >= 5.0)
+              markerColor = SeismicColors.redAlert;
+            else if (mag >= 4.0)
+              markerColor = SeismicColors.orangeAlert;
 
             newMarkers.add(
               Marker(
@@ -374,7 +567,9 @@ class _LiveMapViewState extends State<LiveMapView> {
                     // Tampilkan pop-up kecil saat titik gempa diklik
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('M $mag • ${item['source']}\n${item['wilayah']}'),
+                        content: Text(
+                          'M $mag • ${item['source']}\n${item['wilayah']}',
+                        ),
                         backgroundColor: markerColor,
                         duration: const Duration(seconds: 3),
                       ),
@@ -413,37 +608,51 @@ class _LiveMapViewState extends State<LiveMapView> {
             // Ini lapisan gambar petanya (TileLayer) dari OpenStreetMap
             TileLayer(
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.seismoguard.app', 
+              userAgentPackageName: 'com.seismoguard.app',
             ),
             // Ini lapisan titik-titik gempanya
             MarkerLayer(markers: _markers),
           ],
         ),
-        
+
         // Floating Banner Info
         Positioned(
-          top: 60, left: 20, right: 20,
+          top: 60,
+          left: 20,
+          right: 20,
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.95),
               borderRadius: BorderRadius.circular(30),
-              boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 5))],
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 10,
+                  offset: Offset(0, 5),
+                ),
+              ],
             ),
             child: Row(
               children: [
-                const Icon(Icons.satellite_alt_rounded, color: SeismicColors.navyDark),
+                const Icon(
+                  Icons.satellite_alt_rounded,
+                  color: SeismicColors.navyDark,
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Menampilkan ${_markers.length} Titik Gempa Aktif', 
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: SeismicColors.navyDark)
+                    'Menampilkan ${_markers.length} Titik Gempa Aktif',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: SeismicColors.navyDark,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        )
+        ),
       ],
     );
   }

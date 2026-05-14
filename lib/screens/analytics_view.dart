@@ -24,6 +24,10 @@ class _AnalyticsViewState extends State<AnalyticsView> {
   double _avgMagnitude = 0;
   int _totalEvents = 0;
   Map<String, int> _distribution = {'Minor': 0, 'Light': 0, 'Moderate': 0, 'Major': 0};
+  List<double> _monthlyCounts = [0, 0, 0, 0, 0, 0]; // Jan - Jun
+  
+  // DEKLARASI VARIABEL HARUS DI SINI, DI TINGKAT CLASS
+  double _maxBarValue = 50; 
 
   @override
   void initState() {
@@ -33,26 +37,44 @@ class _AnalyticsViewState extends State<AnalyticsView> {
 
   Future<void> _calcStats() async {
     try {
-      final data = await Supabase.instance.client.from('gempa_live').select('magnitude');
+      final data = await Supabase.instance.client.from('gempa_live').select('magnitude, waktu');
       
       if (data.isNotEmpty) {
         double totalMag = 0;
         Map<String, int> dist = {'Minor': 0, 'Light': 0, 'Moderate': 0, 'Major': 0};
+        List<double> counts = [0, 0, 0, 0, 0, 0];
 
         for (var item in data) {
           double mag = double.tryParse(item['magnitude'].toString()) ?? 0;
           totalMag += mag;
 
+          // Hitung Distribusi
           if (mag < 4.0) dist['Minor'] = dist['Minor']! + 1;
           else if (mag < 5.0) dist['Light'] = dist['Light']! + 1;
           else if (mag < 6.0) dist['Moderate'] = dist['Moderate']! + 1;
           else dist['Major'] = dist['Major']! + 1;
+
+          // Hitung Bulanan
+          String rawTime = item['waktu'].toString();
+          if (rawTime.contains('-')) {
+            int month = int.tryParse(rawTime.split('-')[1]) ?? 0;
+            if (month >= 1 && month <= 6) {
+              counts[month - 1]++;
+            }
+          }
         }
+
+        // Kalkulasi batas maksimal sumbu Y sebelum masuk setState
+        double highestCount = counts.reduce((curr, next) => curr > next ? curr : next);
+        double calculatedMax = highestCount + (highestCount * 0.2);
+        if (calculatedMax < 10) calculatedMax = 10;
 
         setState(() {
           _totalEvents = data.length;
           _avgMagnitude = totalMag / data.length;
           _distribution = dist;
+          _monthlyCounts = counts; 
+          _maxBarValue = calculatedMax; // Masukkan nilai yang sudah dihitung
           _isLoading = false;
         });
       }
@@ -61,6 +83,8 @@ class _AnalyticsViewState extends State<AnalyticsView> {
       setState(() => _isLoading = false);
     }
   }
+
+  // ... (Sisa kode Widget build(BuildContext context) ke bawah biarkan saja seperti milikmu) ...
 
   @override
   Widget build(BuildContext context) {
@@ -114,7 +138,7 @@ class _AnalyticsViewState extends State<AnalyticsView> {
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
-                  maxY: 35, // Batas maksimal sumbu Y
+                 maxY: _maxBarValue,
                   barTouchData: BarTouchData(enabled: false), // Matikan efek klik biar bersih
                   titlesData: FlTitlesData(
                     show: true,
@@ -258,15 +282,9 @@ class _AnalyticsViewState extends State<AnalyticsView> {
   }
 
   List<BarChartGroupData> _buildBarGroups() {
-    double width = 22; // Ketebalan bar
-    return [
-      _makeGroupData(0, 15, SeismicColors.navyDark, width),
-      _makeGroupData(1, 10, SeismicColors.redAlert, width),
-      _makeGroupData(2, 25, SeismicColors.navyDark, width),
-      _makeGroupData(3, 18, SeismicColors.navyDark, width),
-      _makeGroupData(4, 22, SeismicColors.redAlert, width),
-      _makeGroupData(5, 30, SeismicColors.navyDark, width),
-    ];
+    return List.generate(6, (i) {
+      return _makeGroupData(i, _monthlyCounts[i], i % 2 == 0 ? SeismicColors.navyDark : SeismicColors.redAlert, 22);
+    });
   }
 
   BarChartGroupData _makeGroupData(int x, double y, Color color, double width) {
