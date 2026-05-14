@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sasimo_guard/screens/home_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/login_screen.dart'; 
 
@@ -23,9 +24,11 @@ class MyApp extends StatelessWidget {
       title: 'SeismoGuard',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        useMaterial3: true, // Gunakan Material 3 agar lebih modern
+        colorSchemeSeed: Colors.blue,
       ),
-      home: const LoginScreen(),
+      // Sekarang langsung ke HomeScreen tanpa paksa Login di awal
+      home: const HomeScreen(), 
     );
   }
 }

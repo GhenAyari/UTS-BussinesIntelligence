@@ -16,9 +16,14 @@ class _HomeScreenState extends State<HomeScreen> {
   // Fungsi ini mengambil role dari database Supabase
   Future<Widget> _checkUserRole() async {
     final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return const LoginScreen();
+    
+    // JIKA TIDAK LOGIN -> LANGSUNG KE PETA PUBLIK
+    if (user == null) {
+      return const PublicScreen();
+    }
 
     try {
+      // JIKA LOGIN -> CEK ROLE ADMIN/DAERAH
       final response = await Supabase.instance.client
           .from('profiles')
           .select('role')
@@ -26,18 +31,12 @@ class _HomeScreenState extends State<HomeScreen> {
           .single();
 
       final role = response['role'] as String;
-
-      // LOGIKA MELEMPAR HALAMAN (ROUTING)
-      if (role == 'admin_pusat') {
-        return const AdminPusatScreen();
-      } else if (role == 'admin_daerah') {
-        return const AdminDaerahScreen();
-      } else {
-        return const PublicScreen(); // Default lempar ke halaman Public (Gempa Terkini)
-      }
+      if (role == 'admin_pusat') return const AdminPusatScreen();
+      if (role == 'admin_daerah') return const AdminDaerahScreen();
+      
+      return const PublicScreen();
     } catch (e) {
-      // Jika terjadi error, lempar ke Public
-      return const PublicScreen(); 
+      return const PublicScreen();
     }
   }
 
