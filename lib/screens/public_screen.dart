@@ -9,6 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'analytics_view.dart';
 import 'all_earthquakes_screen.dart';
 import 'dart:typed_data';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // --- THEME COLORS ---
 class SeismicColors {
@@ -121,12 +122,25 @@ class _PublicScreenState extends State<PublicScreen> {
         .subscribe();
   }
 
+  // --- TIMPA FUNGSI INI SAJA ---
   Future<void> _processEWSAlert(Map<String, dynamic> data) async {
+    // 1. Panggil memori jangka panjang (SharedPreferences)
+    final prefs = await SharedPreferences.getInstance();
+    List<String> notifiedList = prefs.getStringList('history_notif_gempa') ?? [];
+
     String idUnikGempa = "${data['waktu']}_${data['wilayah']}";
-    if (_gempaSudahDinotif.contains(idUnikGempa)) {
+
+    // 2. Kalau gempa ini udah pernah dinotif, hentikan proses (Biar gak spam!)
+    if (notifiedList.contains(idUnikGempa)) {
       return; 
     }
-    _gempaSudahDinotif.add(idUnikGempa); // Masukkan ke dalam ingatan HP
+
+    // Masukkan ke ingatan permanen (Dibatasi 50 gempa biar memori HP gak penuh)
+    notifiedList.add(idUnikGempa);
+    if (notifiedList.length > 50) notifiedList.removeAt(0);
+    await prefs.setStringList('history_notif_gempa', notifiedList);
+
+    // 3. Ekstrak data
     double mag = double.tryParse(data['magnitude'].toString()) ?? 0;
     String wilayah = data['wilayah'] ?? 'Lokasi tidak diketahui';
     String koordinat = data['koordinat'] ?? '';
@@ -142,39 +156,47 @@ class _PublicScreenState extends State<PublicScreen> {
               _userPosition!.longitude,
               quakeLat,
               quakeLng,
-            ) /
-            1000; // meter → km
+            ) / 1000; // meter -> km
       }
     }
 
-    bool isNear = distanceKm <= 300.0;
+    // 4. Aturan EWS (Jarak sudah dikembalikan ke 300km yang logis)
+    bool isNear = distanceKm <= 300.0; 
     bool isDangerous = mag >= 5.0;
+
+    // Bikin ID Notifikasi unik per gempa biar muncul semua dan gak saling timpa
+    int notifId = idUnikGempa.hashCode;
 
     if (isNear && isDangerous) {
       await _showNotification(
-        id: 1,
+        id: notifId, 
         title: '⚠️ AWAS! GEMPA KUAT DEKAT ANDA',
-        body:
-            'M $mag terdeteksi ${distanceKm.toStringAsFixed(0)} km dari lokasi Anda. BERLINDUNG SEKARANG!',
+        body: 'M $mag terdeteksi ${distanceKm.toStringAsFixed(0)} km dari Anda. BERLINDUNG!',
         isUrgent: true,
       );
     } else if (isNear && !isDangerous) {
       await _showNotification(
-        id: 2,
+        id: notifId,
         title: 'ℹ️ Info: Gempa Terasa',
-        body:
-            'Gempa M $mag berjarak ${distanceKm.toStringAsFixed(0)} km di $wilayah.',
+        body: 'Gempa M $mag berjarak ${distanceKm.toStringAsFixed(0)} km di $wilayah.',
         isUrgent: false,
       );
     } else if (!isNear && isDangerous) {
       await _showNotification(
-        id: 3,
+        id: notifId,
         title: 'Peringatan Gempa Jauh',
         body: 'Gempa kuat M $mag terjadi di $wilayah.',
         isUrgent: false,
       );
+    } else {
+      // --- TAMBAHIN BLOK ELSE INI BUAT TESTING ---
+      await _showNotification(
+        id: notifId,
+        title: 'Info Minor',
+        body: 'Gempa kecil M $mag jarak ${distanceKm.toStringAsFixed(0)} km di $wilayah.',
+        isUrgent: false,
+      );
     }
-    // kalau jauh + lemah → tidak ada notifikasi
   }
 
 Future<void> _showNotification({
