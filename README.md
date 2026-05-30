@@ -1,4 +1,4 @@
-![poster](docs/visuals/poster.png)
+![poster](poster.png)
 # SasimokGuard: End-to-End Real-Time Earthquake Data Pipeline & Early Warning System
 
 ## Project Overview
